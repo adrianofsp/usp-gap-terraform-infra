@@ -1,4 +1,4 @@
-# **iot-usp-terraform-infra**
+# **usp-terraform-infra**
 Repositório "Infrastructure-As-Code", IaC terraform.
 
 ### **workspaces**  
