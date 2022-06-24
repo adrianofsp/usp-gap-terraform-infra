@@ -57,3 +57,198 @@ variable "associate_public_ip_address" {
   default     = true
   description = "Whether to associate public IP to the instance."
 }
+
+
+# container definition
+variable "container_name" {
+  type        = string
+  description = "The name of the container. Up to 255 characters ([a-z], [A-Z], [0-9], -, _ allowed)"
+}
+
+variable "container_image" {
+  type        = string
+  description = "The default container image to use in container definition"
+  default     = "grafana/grafana"
+}
+
+variable "container_cpu" {
+  type        = number
+  description = "The vCPU setting to control cpu limits of container. (If FARGATE launch type is used below, this must be a supported vCPU size from the table here: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-cpu-memory-error.html)"
+  default     = 256
+}
+
+variable "container_memory" {
+  type        = number
+  description = "The amount of RAM to allow container to use in MB. (If FARGATE launch type is used below, this must be a supported Memory size from the table here: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-cpu-memory-error.html)"
+  default     = 512
+}
+
+variable "container_memory_reservation" {
+  type        = number
+  description = "The amount of RAM (Soft Limit) to allow container to use in MB. This value must be less than `container_memory` if set"
+  default     = 512
+}
+
+variable "essential" {
+  type        = bool
+  description = "Determines whether all other containers in a task are stopped, if this container fails or stops for any reason. Due to how Terraform type casts booleans in json it is required to double quote this value"
+  default     = true
+}
+
+variable "readonly_root_filesystem" {
+  type        = bool
+  description = "Determines whether a container is given read-only access to its root filesystem. Due to how Terraform type casts booleans in json it is required to double quote this value"
+  default     = false
+}
+
+variable "container_environment" {
+  type = list(object({
+    name  = string
+    value = string
+  }))
+  description = "The environment variables to pass to the container. This is a list of maps. map_environment overrides environment"
+  default     = []
+}
+
+variable "container_port" {
+  type        = number
+  description = "The port number on the container bound to assigned host_port"
+  default     = 80
+}
+
+variable "container_port_mappings" {
+  type = list(object({
+    containerPort = number
+    hostPort      = number
+    protocol      = string
+  }))
+
+  description = "The port mappings to configure for the container. This is a list of maps. Each map should contain \"containerPort\", \"hostPort\", and \"protocol\", where \"protocol\" is one of \"tcp\" or \"udp\". If using containers in a task with the awsvpc or host network mode, the hostPort can either be left blank or set to the same value as the containerPort"
+
+  default = [
+    {
+      containerPort = 80
+      hostPort      = 80
+      protocol      = "tcp"
+    }
+  ]
+}
+
+variable "launch_type" {
+  type        = string
+  description = "The ECS launch type (valid options: FARGATE or EC2)"
+  default     = "FARGATE"
+}
+
+variable "ignore_changes_task_definition" {
+  type        = bool
+  description = "Whether to ignore changes in container definition and task definition in the ECS service"
+}
+
+variable "network_mode" {
+  type        = string
+  description = "The network mode to use for the task. This is required to be `awsvpc` for `FARGATE` `launch_type`"
+  default     = "awsvpc"
+}
+
+variable "assign_public_ip" {
+  type        = bool
+  description = "Assign a public IP address to the ENI (Fargate launch type only). Valid values are `true` or `false`. Default `false`"
+  default     = false
+}
+
+variable "propagate_tags" {
+  type        = string
+  description = "Specifies whether to propagate the tags from the task definition or the service to the tasks. The valid values are SERVICE and TASK_DEFINITION"
+  default     = "SERVICE"
+}
+
+variable "health_check_grace_period_seconds" {
+  type        = number
+  description = "Seconds to ignore failing load balancer health checks on newly instantiated tasks to prevent premature shutdown, up to 7200. Only valid for services configured to use load balancers"
+  default     = 0
+}
+
+variable "deployment_minimum_healthy_percent" {
+  type        = number
+  description = "The lower limit (as a percentage of `desired_count`) of the number of tasks that must remain running and healthy in a service during a deployment"
+}
+
+variable "deployment_maximum_percent" {
+  type        = number
+  description = "The upper limit of the number of tasks (as a percentage of `desired_count`) that can be running in a service during a deployment"
+}
+
+variable "deployment_controller_type" {
+  type        = string
+  description = "Type of deployment controller. Valid values are `CODE_DEPLOY` and `ECS`"
+}
+
+variable "desired_count" {
+  type        = number
+  description = "The desired number of tasks to start with. Set this to 0 if using DAEMON Service type. (FARGATE does not suppoert DAEMON Service type)"
+  default     = 2
+}
+
+variable "task_cpu" {
+  type        = number
+  description = "The number of CPU units used by the task. If using `FARGATE` launch type `task_cpu` must match supported memory values (https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#task_size)"
+}
+
+variable "task_memory" {
+  type        = number
+  description = "The amount of memory (in MiB) used by the task. If using Fargate launch type `task_memory` must match supported cpu value (https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task_definition_parameters.html#task_size)"
+}
+
+variable "security_group_enabled" {
+  type        = bool
+  description = "Create security group for ECS Service."
+  default     = false
+}
+
+variable "default_target_group_enabled" {
+  type        = bool
+  description = "Whether the default target group should be created or not."
+  default     = true
+}
+
+
+
+
+
+# variable "log_driver" {
+#   type        = string
+#   description = "The log driver to use for the container. If using Fargate launch type, only supported value is awslogs"
+#   default     = "awslogs"
+# }
+
+# # https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_HealthCheck.html
+# variable "healthcheck" {
+#   type = object({
+#     command     = list(string)
+#     retries     = number
+#     timeout     = number
+#     interval    = number
+#     startPeriod = number
+#   })
+#   description = "A map containing command (string), timeout, interval (duration in seconds), retries (1-10, number of times to retry before marking container unhealthy), and startPeriod (0-300, optional grace period to wait, in seconds, before failed healthchecks count toward retries)"
+#   default     = null
+# }
+
+# variable "ecs_security_group_ids" {
+#   type        = list(string)
+#   description = "Additional Security Group IDs to allow into ECS Service"
+#   default     = []
+# }
+
+
+
+
+
+
+
+# variable "alb_ingress_healthcheck_path" {
+#   type        = string
+#   description = "The path of the healthcheck which the ALB checks"
+#   default     = "/"
+# }

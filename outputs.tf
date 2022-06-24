@@ -6,3 +6,7 @@ output "az" {
 output "name" {
   value = module.dynamic-subnets
 }
+
+# output "container_definition" {
+#   value = module.container_definition.json_map_object
+# }
