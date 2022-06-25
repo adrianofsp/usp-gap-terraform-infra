@@ -1,117 +1,125 @@
-# resource "aws_ecs_cluster" "default" {
-#   name = module.this.id
-#   tags = module.this.tags
+resource "aws_ecs_cluster" "default" {
+  name = module.this.id
+  tags = module.this.tags
+}
+
+module "sg" {
+  source     = "cloudposse/security-group/aws"
+  version    = "1.0.1"
+  attributes = ["primary"]
+  namespace  = var.namespace
+  stage      = var.stage
+  name       = "observability"
+
+  # Allow unlimited egress
+  allow_all_egress = true
+
+  rules = [
+    {
+      key         = "HTTP"
+      type        = "ingress"
+      from_port   = 3000
+      to_port     = 3000
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+      self        = null
+      description = "Allow HTTP access to grafana"
+    }
+  ]
+
+  vpc_id = module.vpc.vpc_id
+
+  context = module.this.context
+}
+
+module "alb" {
+  source                                  = "cloudposse/alb/aws"
+  version                                 = "0.27.0"
+  namespace                               = var.namespace
+  stage                                   = var.stage
+  name                                    = "alb"
+  vpc_id                                  = module.vpc.vpc_id
+  security_group_ids                      = [module.sg.id]
+  subnet_ids                              = module.dynamic-subnets.public_subnet_ids
+  internal                                = false
+  http_enabled                            = true
+  access_logs_enabled                     = true
+  alb_access_logs_s3_bucket_force_destroy = true
+  cross_zone_load_balancing_enabled       = true
+  http2_enabled                           = true
+  deletion_protection_enabled             = false
+  http_port                               = 80
+  target_group_port                       = 3000
+
+  context = module.this.context
+}
+
+module "container_definition" {
+  source  = "cloudposse/ecs-container-definition/aws"
+  version = "0.58.1"
+
+  container_name               = var.container_name
+  container_image              = var.container_image
+  container_memory             = var.container_memory
+  container_memory_reservation = var.container_memory_reservation
+  container_cpu                = var.container_cpu
+  essential                    = var.essential
+  readonly_root_filesystem     = var.readonly_root_filesystem
+  environment                  = var.container_environment
+  port_mappings                = var.container_port_mappings
+
+}
+
+module "ecs_alb_service_task" {
+  source                             = "cloudposse/ecs-alb-service-task/aws"
+  version                            = "0.64.0"
+  namespace                          = var.namespace
+  stage                              = var.stage
+  name                               = "observability"
+  alb_security_group                 = module.vpc.vpc_default_security_group_id
+  container_definition_json          = module.container_definition.json_map_encoded_list
+  ecs_cluster_arn                    = aws_ecs_cluster.default.arn
+  launch_type                        = var.launch_type
+  vpc_id                             = module.vpc.vpc_id
+  security_group_ids                 = [module.sg.id]
+  subnet_ids                         = module.dynamic-subnets.public_subnet_ids
+  ignore_changes_task_definition     = var.ignore_changes_task_definition
+  network_mode                       = var.network_mode
+  assign_public_ip                   = var.assign_public_ip
+  propagate_tags                     = var.propagate_tags
+  health_check_grace_period_seconds  = var.health_check_grace_period_seconds
+  deployment_minimum_healthy_percent = var.deployment_minimum_healthy_percent
+  deployment_maximum_percent         = var.deployment_maximum_percent
+  deployment_controller_type         = var.deployment_controller_type
+  desired_count                      = var.desired_count
+  task_memory                        = var.task_memory
+  task_cpu                           = var.task_cpu
+  security_group_enabled             = var.security_group_enabled
+
+  ecs_load_balancers = [{
+    container_name   = var.container_name
+    container_port   = var.container_port
+    elb_name         = null
+    target_group_arn = module.alb.default_target_group_arn
+  }]
+}
+
+# module "ecs_cloudwatch_autoscaling" {
+#   source                = "cloudposse/ecs-cloudwatch-autoscaling/aws"
+#   version               = "0.7.3"
+#   namespace             = var.namespace
+#   stage                 = var.stage
+#   name                  = "observability-autoscaling"
+#   context               = module.this.context
+#   cluster_name          = aws_ecs_cluster.default.name
+#   service_name          = module.ecs_alb_service_task.service_name
+#   min_capacity          = var.min_capacity
+#   max_capacity          = var.max_capacity
+#   scale_up_adjustment   = var.scale_up_adjustment
+#   scale_up_cooldown     = var.scale_up_cooldown
+#   scale_down_adjustment = var.scale_down_adjustment
+#   scale_down_cooldown   = var.scale_down_cooldown
 # }
-
-# module "sg" {
-#   source     = "cloudposse/security-group/aws"
-#   version    = "1.0.1"
-#   attributes = ["primary"]
-#   namespace  = var.namespace
-#   stage      = var.stage
-#   name       = "observability"
-
-#   # Allow unlimited egress
-#   allow_all_egress = true
-
-#   rules = [
-#     {
-#       key         = "HTTP"
-#       type        = "ingress"
-#       from_port   = 3000
-#       to_port     = 3000
-#       protocol    = "tcp"
-#       cidr_blocks = ["0.0.0.0/0"]
-#       self        = null
-#       description = "Allow HTTP access to grafana"
-#     }
-#   ]
-
-#   vpc_id = module.vpc.vpc_id
-
-#   context = module.this.context
-# }
-
-# module "alb" {
-#   source                                  = "cloudposse/alb/aws"
-#   version                                 = "0.27.0"
-#   namespace                               = var.namespace
-#   stage                                   = var.stage
-#   name                                    = "alb"
-#   vpc_id                                  = module.vpc.vpc_id
-#   security_group_ids                      = [module.sg.id]
-#   subnet_ids                              = module.dynamic-subnets.public_subnet_ids
-#   internal                                = false
-#   http_enabled                            = true
-#   access_logs_enabled                     = true
-#   alb_access_logs_s3_bucket_force_destroy = true
-#   cross_zone_load_balancing_enabled       = true
-#   http2_enabled                           = true
-#   deletion_protection_enabled             = false
-#   http_port                               = 3000
-#   target_group_port                       = 3000
-
-#   context = module.this.context
-# }
-
-# module "container_definition" {
-#   source  = "cloudposse/ecs-container-definition/aws"
-#   version = "0.58.1"
-
-#   container_name               = var.container_name
-#   container_image              = var.container_image
-#   container_memory             = var.container_memory
-#   container_memory_reservation = var.container_memory_reservation
-#   container_cpu                = var.container_cpu
-#   essential                    = var.essential
-#   readonly_root_filesystem     = var.readonly_root_filesystem
-#   environment                  = var.container_environment
-#   port_mappings                = var.container_port_mappings
-
-# }
-
-# module "ecs_alb_service_task" {
-#   source                             = "cloudposse/ecs-alb-service-task/aws"
-#   version                            = "0.64.0"
-#   namespace                          = var.namespace
-#   stage                              = var.stage
-#   name                               = "observability"
-#   alb_security_group                 = module.vpc.vpc_default_security_group_id
-#   container_definition_json          = module.container_definition.json_map_encoded_list
-#   ecs_cluster_arn                    = aws_ecs_cluster.default.arn
-#   launch_type                        = var.launch_type
-#   vpc_id                             = module.vpc.vpc_id
-#   security_group_ids                 = [module.sg.id]
-#   subnet_ids                         = module.dynamic-subnets.public_subnet_ids
-#   ignore_changes_task_definition     = var.ignore_changes_task_definition
-#   network_mode                       = var.network_mode
-#   assign_public_ip                   = var.assign_public_ip
-#   propagate_tags                     = var.propagate_tags
-#   health_check_grace_period_seconds  = var.health_check_grace_period_seconds
-#   deployment_minimum_healthy_percent = var.deployment_minimum_healthy_percent
-#   deployment_maximum_percent         = var.deployment_maximum_percent
-#   deployment_controller_type         = var.deployment_controller_type
-#   desired_count                      = var.desired_count
-#   task_memory                        = var.task_memory
-#   task_cpu                           = var.task_cpu
-#   security_group_enabled             = var.security_group_enabled
-
-
-#   ecs_load_balancers = [{
-#     container_name   = var.container_name
-#     container_port   = var.container_port
-#     elb_name         = null
-#     target_group_arn = module.alb.default_target_group_arn
-#   }]
-# }
-
-
-
-
-
-
-
-
 
 
 

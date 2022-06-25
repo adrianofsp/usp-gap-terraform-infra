@@ -40,8 +40,6 @@ container_port_mappings = [
   }
 ]
 
-
-
 # ecs service
 launch_type                        = "FARGATE"
 ignore_changes_task_definition     = true
@@ -58,3 +56,11 @@ task_cpu                           = 512
 
 # alb
 alb_ingress_healthcheck_path = "/"
+
+# autoscaling
+min_capacity          = 1
+max_capacity          = 5
+scale_up_adjustment   = 1
+scale_up_cooldown     = 60
+scale_down_adjustment = -1
+scale_down_cooldown   = 300

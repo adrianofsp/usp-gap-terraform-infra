@@ -212,7 +212,36 @@ variable "default_target_group_enabled" {
   default     = true
 }
 
+# autoscaling
+variable "min_capacity" {
+  type        = number
+  description = "Minimum number of running instances of a Service"
+}
 
+variable "max_capacity" {
+  type        = number
+  description = "Maximum number of running instances of a Service"
+}
+
+variable "scale_up_adjustment" {
+  type        = number
+  description = "Scaling adjustment to make during scale up event"
+}
+
+variable "scale_up_cooldown" {
+  type        = number
+  description = "Period (in seconds) to wait between scale up events"
+}
+
+variable "scale_down_adjustment" {
+  type        = number
+  description = "Scaling adjustment to make during scale down event"
+}
+
+variable "scale_down_cooldown" {
+  type        = number
+  description = "Period (in seconds) to wait between scale down events"
+}
 
 
 
