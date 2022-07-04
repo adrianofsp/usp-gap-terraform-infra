@@ -1,11 +1,6 @@
 ssh_key_path     = "./secrets"
 generate_ssh_key = true
-
-# user_data = [
-#   "yum install -y postgresql-client-common"
-# ]
-# security_groups = []
-instance_type = "t3a.nano"
+instance_type    = "t3a.nano"
 
 security_group_rules = [
   {
@@ -24,8 +19,7 @@ security_group_rules = [
   }
 ]
 
-# task definition
-log_driver                   = "awslogs"
+# container definition
 container_name               = "grafana"
 container_image              = "grafana/grafana:latest"
 container_memory             = 1024
@@ -49,13 +43,12 @@ propagate_tags                     = "TASK_DEFINITION"
 deployment_minimum_healthy_percent = 100
 deployment_maximum_percent         = 200
 deployment_controller_type         = "ECS"
-desired_count                      = 2
+desired_count                      = 1
 task_memory                        = 1024
 task_cpu                           = 512
 
-
 # alb
-alb_ingress_healthcheck_path = "/"
+# alb_ingress_healthcheck_path = "/"
 
 # autoscaling
 min_capacity          = 1

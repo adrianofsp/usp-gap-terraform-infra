@@ -71,6 +71,12 @@ variable "container_image" {
   default     = "grafana/grafana"
 }
 
+variable "container_definition" {
+  type        = map(any)
+  description = "Container definition overrides which allows for extra keys or overriding existing keys."
+  default     = {}
+}
+
 variable "container_cpu" {
   type        = number
   description = "The vCPU setting to control cpu limits of container. (If FARGATE launch type is used below, this must be a supported vCPU size from the table here: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-cpu-memory-error.html)"
@@ -132,6 +138,12 @@ variable "container_port_mappings" {
       protocol      = "tcp"
     }
   ]
+}
+
+variable "container_log_configuration" {
+  type        = any
+  description = "Log configuration options to send to a custom log driver for the container. For more details, see https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_LogConfiguration.html"
+  default     = null
 }
 
 variable "launch_type" {
@@ -243,6 +255,39 @@ variable "scale_down_cooldown" {
   description = "Period (in seconds) to wait between scale down events"
 }
 
+# cloudwatch autoscaling alarms
+variable "max_cpu_threshold" {
+  description = "Threshold for max CPU usage"
+  default     = "85"
+  type        = string
+}
+variable "min_cpu_threshold" {
+  description = "Threshold for min CPU usage"
+  default     = "10"
+  type        = string
+}
+
+variable "max_cpu_evaluation_period" {
+  description = "The number of periods over which data is compared to the specified threshold for max cpu metric alarm"
+  default     = "3"
+  type        = string
+}
+variable "min_cpu_evaluation_period" {
+  description = "The number of periods over which data is compared to the specified threshold for min cpu metric alarm"
+  default     = "3"
+  type        = string
+}
+
+variable "max_cpu_period" {
+  description = "The period in seconds over which the specified statistic is applied for max cpu metric alarm"
+  default     = "60"
+  type        = string
+}
+variable "min_cpu_period" {
+  description = "The period in seconds over which the specified statistic is applied for min cpu metric alarm"
+  default     = "60"
+  type        = string
+}
 
 
 # variable "log_driver" {
